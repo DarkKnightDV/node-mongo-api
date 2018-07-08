@@ -31,6 +31,7 @@ app.post('/users', (req, res) => {
     });
 
     user.save().then((user) => {
+        console.log("User created successfully:", user);
         res.send(user);
     }).catch((err) => {
         res.status(400).send(err);
@@ -40,3 +41,5 @@ app.post('/users', (req, res) => {
 app.listen(port, () => {
     console.log(`Server started on ${port}`);
 })
+
+module.exports = {app};
