@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
+const _ = require('lodash');
 
 const {mongoose} = require('./mongoose'); 
 const {ToDo} = require('./models/todo');
@@ -56,6 +57,48 @@ app.get('/todos/:id', (req, res) => {
             res.status(400).send(err);
         });
     }
+});
+
+app.delete('/todos/:id', (req, res) => {
+    var id = req.params.id;
+    if(!ObjectID.isValid(id)) {
+        return res.status(404).send({"error": "Invalid Object Id"});
+    } 
+    ToDo.findByIdAndRemove(id).then((todo) => {
+        if(!todo) {
+            return res.status(404).send({"error": "No object found"});
+        } 
+              
+        res.send({"success" : "Object Deleted", todo});
+    }).catch((err) => {
+        res.status(400).send(err);
+    });
+});
+
+app.patch("/todos/:id", (req, res) => {
+    var id = req.params.id;
+    var body = _.pick(req.body, ['text', 'completed']);
+
+    if(!ObjectID.isValid(id)) {
+        return res.status(400).send({"error":"id not found"});
+    }
+
+    if(_.isBoolean(body.completed) && body.completed){
+        body.completedAt = new Date();        
+    } else {
+        body.completed = false;
+        body.completedAt = null;
+    }
+
+    ToDo.findByIdAndUpdate(id, { $set: body}, {new : true}).then((todo) => {
+        if(!todo) {
+            return res.status(404).send({"error":"Update failed"});
+        }
+
+        res.send({"success":"Object Updated", todo});
+    }).catch((err) => {
+        res.status(400).send(err);
+    });
 });
 
 app.post('/users', (req, res) => {

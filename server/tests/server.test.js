@@ -8,10 +8,13 @@ const {User} = require('./../models/user');
 
 const todos = [{
     _id: new ObjectID(),
-    text: "Todo Unit Test1"
+    text: "Todo Unit Test1",
+    completed: true
 },{
     _id: new ObjectID(),
-    text: "Todo Unit Test2"
+    text: "Todo Unit Test2",
+    completed: false,
+    completedAt : new Date()
 }];
 
 beforeEach((done) => {
@@ -102,6 +105,72 @@ describe('GET /todos/:id' , (done) => {
 
     it('Should not return for Missing but Valid ID' , (done) => {
         request(app).get(`/todos/${new ObjectID().toHexString()}`)
+            .expect(404)
+            .end(done);
+    });
+});
+
+describe('PATCH /todos/:id', (done) => {
+    it('Should update todo', (done) => {
+        var id = todos[0]._id.toHexString();
+        var toUpdate = {"text": "Test Case 1", "completed": true};
+        request(app).patch(`/todos/${id}`)
+            .send(toUpdate)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.todo.text).toBe(toUpdate.text);
+                expect(res.body.todo.completed).toBe(true);
+                expect(res.body.todo.completedAt).toBeDefined;
+            }).end(done);
+    });
+
+    it('Should not update cmpletedAt', (done) => {
+        var id = todos[1]._id.toHexString();
+        var toUpdate = {"text": "Test Case 1", "completed": false};
+
+        request(app).patch(`/todos/${id}`)
+            .send(toUpdate)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.todo.text).toBe(toUpdate.text);
+                expect(res.body.todo.completed).toBe(false);
+                expect(res.body.todo.completedAt).toBeNull;
+            }).end(done);
+    });
+});
+
+describe('DELETE /todos/:id', (done) => {
+    it('Should delete by Id', (done) => {
+        var id = todos[0]._id.toHexString();
+        request(app).delete(`/todos/${id}`)
+            .expect(200)
+            .expect((res) => {
+                expect(res).toBeDefined;
+                expect(res.body.todo).toExist;
+                expect(res.body.todo._id).toBe(id);
+            })
+            .end((err, res) => {
+                if(err) {
+                    return done(err);
+                }
+
+                ToDo.findById(id).then((todo) => {
+                    expect(todo).toNotExist;
+                    done();
+                }).catch((err) => {
+                    done(err);
+                });
+            });
+    });
+
+    it('Should not delete for invalid ID', (done) => {
+        request(app).delete('/todos/123sdsffdf')
+            .expect(404)
+            .end(done);
+    });
+
+    it('Should not delete missing Id', (done) => {
+        request(app).delete(`/todos/${new ObjectID().toHexString()}`)
             .expect(404)
             .end(done);
     });
