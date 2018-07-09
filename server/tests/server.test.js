@@ -1,14 +1,24 @@
 const expect = require('expect');
 const request = require('supertest');
+const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
 const {ToDo} = require('./../models/todo');
 const {User} = require('./../models/user');
 
-// To peform before each test case execution
-// beforeEach((done) => {
-//     ToDo.remove({}).then(()=> done());
-// });
+const todos = [{
+    _id: new ObjectID(),
+    text: "Todo Unit Test1"
+},{
+    _id: new ObjectID(),
+    text: "Todo Unit Test2"
+}];
+
+beforeEach((done) => {
+    ToDo.remove({}).then(()=> {
+        return ToDo.insertMany(todos);
+    }).then(() => done());
+});
 
 describe('POST /todos', (done) => {
 
@@ -72,6 +82,28 @@ describe('GET /todos', (done)=> {
                 .expect((res) => {
                     expect(res.body.todos.length).toBeGreaterThan(0);
                 }). end(done);
+    });
+});
+
+describe('GET /todos/:id' , (done) => {
+    it('Should return Todo for given ID', (done) => {
+        request(app).get(`/todos/${todos[0]._id.toHexString()}`)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.todo.text).toBe(todos[0].text);
+            }).end(done);
+    });
+
+    it('Should not return for Invalid ID', (done) => {
+        request(app).get(`/todos/${todos[0]._id.toHexString()}abc`)
+            .expect(404)
+            .end(done);
+    });
+
+    it('Should not return for Missing but Valid ID' , (done) => {
+        request(app).get(`/todos/${new ObjectID().toHexString()}`)
+            .expect(404)
+            .end(done);
     });
 });
 

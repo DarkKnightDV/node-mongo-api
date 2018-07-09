@@ -45,10 +45,10 @@ app.get('/todos/:id', (req, res) => {
         });
     } else {
         // ToDo.find({_id: id}).then((todos) => {
-        ToDo.findById(id).then((todos) => {
+        ToDo.findById(id).then((todo) => {
             // if(todos.length > 0){
-            if(todos){
-                res.send({todos});
+            if(todo){
+                res.send({todo});
             } else {
                 res.status(404).send({"msg": `No Todos found for the id(${id})`})
             }
