@@ -5,6 +5,11 @@ const {app} = require('./../server');
 const {ToDo} = require('./../models/todo');
 const {User} = require('./../models/user');
 
+// To peform before each test case execution
+// beforeEach((done) => {
+//     ToDo.remove({}).then(()=> done());
+// });
+
 describe('POST /todos', (done) => {
 
     // Test Case# 1
@@ -29,6 +34,45 @@ describe('POST /todos', (done) => {
             });   
     });
 
+    // Test Case# 2
+    it('Should not create for invalid values', (done) => {
+        var initialCount = 0;
+        ToDo.find().then((docs) => {
+            initialCount = docs.length;
+        }).then(() => {
+            request(app).post('/todos')
+            .send({})
+            .expect(400)
+            .end((err, res) => {
+                if(err) {
+                    done(err);
+                }
+
+                ToDo.find().then((docs) => {
+                    // console.log(`Initial count - ${initialCount}, Final Count- ${docs.length}`);
+                    expect(docs.length).toBe(initialCount);
+                    done();
+                }).catch((err) => {
+                    done(err);
+                });
+            });
+        }).catch((err) => {
+            done(err);
+        });
+    });
+
+    // it()
+
+});
+
+describe('GET /todos', (done)=> {
+    it('Get all Todos', (done) => {
+        request(app).get('/todos')
+                .expect(200)
+                .expect((res) => {
+                    expect(res.body.todos.length).toBeGreaterThan(0);
+                }). end(done);
+    });
 });
 
     // Test Case User
