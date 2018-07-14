@@ -108,13 +108,26 @@ app.get('/users/me', authenticate ,(req, res) => {
     res.send(req.user);
 });
 
+/* app.get('/users/validateme', (req, res) => {
+    User.findByToken(req.header['x-auth']).then((user) => {
+        debugger;
+        if(!user){
+            res.status(401).send();
+        }
+        return user.validateToken(req.header['x-auth']);
+    }).then((user) => {
+        res.send(user);
+    }).catch((err) => {
+        res.status(400).send();
+    });
+});
+ */
 app.post('/users', (req, res) => {
     var userData = _.pick(req.body, ['email', 'password']);
     var user = new User(userData);
 
     user.save().then(() => {
         return user.getAuthToken();
-        // res.send(user);
     }).then((token) => {
         res.header({'x-auth' : token}).send(user);
     }).catch((err) => {

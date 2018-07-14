@@ -78,6 +78,10 @@ UserSchema.methods.removeToken = function(token){
     });
 };
 
+/* UserSchema.methods.validateToken = function(token){
+    return User.findOne({tokens: [{token}]});
+};
+ */
 UserSchema.statics.findByToken= function(token) {
     var User = this;
     var decoded;
