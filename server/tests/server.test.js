@@ -120,7 +120,7 @@ describe('PATCH /todos/:id', (done) => {
             .expect((res) => {
                 expect(res.body.todo.text).toBe(toUpdate.text);
                 expect(res.body.todo.completed).toBe(true);
-                expect(res.body.todo.completedAt).toBeDefined;
+                expect(res.body.todo.completedAt).toBeTruthy();
             }).end(done);
     });
 
@@ -145,7 +145,7 @@ describe('PATCH /todos/:id', (done) => {
             .expect((res) => {
                 expect(res.body.todo.text).toBe(toUpdate.text);
                 expect(res.body.todo.completed).toBe(false);
-                expect(res.body.todo.completedAt).toBeNull;
+                expect(res.body.todo.completedAt).toBeFalsy();
             }).end(done);
     });
 });
@@ -157,8 +157,8 @@ describe('DELETE /todos/:id', (done) => {
             .set('x-auth', users[0].tokens[0].token)
             .expect(200)
             .expect((res) => {
-                expect(res).toBeDefined;
-                expect(res.body.todo).toExist;
+                expect(res).toBeTruthy();
+                expect(res.body.todo).toBeTruthy();
                 expect(res.body.todo._id).toBe(id);
             })
             .end((err, res) => {
@@ -167,7 +167,7 @@ describe('DELETE /todos/:id', (done) => {
                 }
 
                 ToDo.findById(id).then((todo) => {
-                    expect(todo).toNotExist;
+                    expect(todo).toBeFalsy();
                     done();
                 }).catch((err) => {
                     done(err);
@@ -234,7 +234,7 @@ describe('POST /users', (done) => {
             .send(user)
             .expect(200)
             .expect((res) => {
-                expect(res.headers['x-auth']).toExist;
+                expect(res.headers['x-auth']).toBeTruthy();
                 expect(res.body.email).toBe(user.email);
             })
             .end((err, res) => {
@@ -242,7 +242,7 @@ describe('POST /users', (done) => {
                     return done(err);
                 }
                 User.findOne({email: "amanda@gmail.com"}).then((res) => {
-                    expect(res).toExist;
+                    expect(res).toBeTruthy();
                     expect(res.password).not.toBe(user.password);  
                 }).then(() => done())
                 .catch((err) => done(err));
@@ -281,7 +281,7 @@ describe("POST /users/login", (done) => {
             .expect(200)
             .expect((res) => {
                 expect(res.body.email).toBe(users[0].email);
-                expect(res.headers['x-auth']).toExist;
+                expect(res.headers['x-auth']).toBeTruthy();
             })
             .end((err, res) => {
                 if(err) {
@@ -293,9 +293,16 @@ describe("POST /users/login", (done) => {
                         access:'auth',
                         token: res.headers['x-auth']
                     }); */
-                    expect(user.tokens[0].access).toBeTruthy;
-                    expect(user.tokens[0].token).toBeTruthy;
-                    expect(user).toExist;
+                    //index 1 as it would have added additional token to user obejct,
+                    //so get from second index value
+                    expect(user.tokens[1]).toMatchObject({
+                        access:'auth',
+                        token: res.headers['x-auth']
+                    });
+                    // Another alternative
+                    // expect(user.tokens[0].access).toBeTruthy();
+                    // expect(user.tokens[0].token).toBeTruthy();
+                    expect(user).toBeTruthy();
                     expect(user.password).not.toBe(users[0].password);
                     done();
                 }).catch((err) => {
@@ -310,7 +317,7 @@ describe("POST /users/login", (done) => {
             .expect(400)
             .expect((res) => {
                 expect(res.body).toEqual({});
-                expect(res.headers['x-auth']).toNotExist;
+                expect(res.headers['x-auth']).toBeFalsy();
             })
             .end(done);
     });
@@ -323,14 +330,14 @@ describe('DELETE /users/me/token', (done) => {
             .send()
             .expect(200)
             .expect((res) => {
-                expect(res.headers['x-auth']).toNotExist;
+                expect(res.headers['x-auth']).toBeFalsy();
             }).end((err, res) => {
                 if(err){
                     return done(err);
                 }
 
                 User.findOne({email : users[0].email}).then((user) => {
-                  expect(user).toExist;
+                  expect(user).toBeTruthy();
                   expect(user.tokens.length).toBe(0);  
                   done();
                 }).catch((err) => {
