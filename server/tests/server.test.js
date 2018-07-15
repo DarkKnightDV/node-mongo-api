@@ -15,6 +15,7 @@ describe('POST /todos', (done) => {
      it('Should create a Todo', (done) => {
         var text = "Unit Testing Mongoose";
          request(app).post('/todos')
+             .set('x-auth', users[0].tokens[0].token)
              .send({text})
              .expect(200)
              .expect((res) => {
@@ -36,10 +37,11 @@ describe('POST /todos', (done) => {
     // Test Case# 2
     it('Should not create for invalid values', (done) => {
         var initialCount = 0;
-        ToDo.find().then((docs) => {
+        ToDo.find({_creator : users[0]._id}).then((docs) => {
             initialCount = docs.length;
         }).then(() => {
             request(app).post('/todos')
+            .set('x-auth', users[0].tokens[0].token)
             .send({})
             .expect(400)
             .end((err, res) => {
@@ -47,7 +49,7 @@ describe('POST /todos', (done) => {
                     done(err);
                 }
 
-                ToDo.find().then((docs) => {
+                ToDo.find({_creator : users[0]._id}).then((docs) => {
                     // console.log(`Initial count - ${initialCount}, Final Count- ${docs.length}`);
                     expect(docs.length).toBe(initialCount);
                     done();
@@ -67,6 +69,7 @@ describe('POST /todos', (done) => {
 describe('GET /todos', (done)=> {
     it('Get all Todos', (done) => {
         request(app).get('/todos')
+                .set('x-auth', users[0].tokens[0].token)
                 .expect(200)
                 .expect((res) => {
                     expect(res.body.todos.length).toBeGreaterThan(0);
@@ -77,20 +80,30 @@ describe('GET /todos', (done)=> {
 describe('GET /todos/:id' , (done) => {
     it('Should return Todo for given ID', (done) => {
         request(app).get(`/todos/${todos[0]._id.toHexString()}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(200)
             .expect((res) => {
                 expect(res.body.todo.text).toBe(todos[0].text);
             }).end(done);
     });
 
-    it('Should not return for Invalid ID', (done) => {
-        request(app).get(`/todos/${todos[0]._id.toHexString()}abc`)
+    it('Should throw 404 for getting other peoples todos', (done) => {
+        request(app).get(`/todos/${todos[0]._id.toHexString()}`)
+            .set('x-auth', users[1].tokens[0].token)
             .expect(404)
             .end(done);
     });
 
-    it('Should not return for Missing but Valid ID' , (done) => {
+    it('Should throw 404 for Invalid ID', (done) => {
+        request(app).get(`/todos/${todos[0]._id.toHexString()}abc`)
+            .set('x-auth', users[1].tokens[0].token)
+            .expect(404)
+            .end(done);
+    });
+
+    it('Should throw 404 for Missing but Valid ID' , (done) => {
         request(app).get(`/todos/${new ObjectID().toHexString()}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(404)
             .end(done);
     });
@@ -101,6 +114,7 @@ describe('PATCH /todos/:id', (done) => {
         var id = todos[0]._id.toHexString();
         var toUpdate = {"text": "Test Case 1", "completed": true};
         request(app).patch(`/todos/${id}`)
+            .set('x-auth', users[0].tokens[0].token)
             .send(toUpdate)
             .expect(200)
             .expect((res) => {
@@ -110,11 +124,22 @@ describe('PATCH /todos/:id', (done) => {
             }).end(done);
     });
 
-    it('Should not update cmpletedAt', (done) => {
+    it('Should throw 404 for updating others todos', (done) => {
+        var id = todos[0]._id.toHexString();
+        var toUpdate = {"text": "Test Case 1", "completed": true};
+        request(app).patch(`/todos/${id}`)
+            .set('x-auth', users[1].tokens[0].token)
+            .send(toUpdate)
+            .expect(404)
+            .end(done);
+    });
+
+    it('Should not update completedAt', (done) => {
         var id = todos[1]._id.toHexString();
-        var toUpdate = {"text": "Test Case 1", "completed": false};
+        var toUpdate = {"text": "Test Case 2", "completed": false};
 
         request(app).patch(`/todos/${id}`)
+            .set('x-auth', users[1].tokens[0].token)
             .send(toUpdate)
             .expect(200)
             .expect((res) => {
@@ -129,6 +154,7 @@ describe('DELETE /todos/:id', (done) => {
     it('Should delete by Id', (done) => {
         var id = todos[0]._id.toHexString();
         request(app).delete(`/todos/${id}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(200)
             .expect((res) => {
                 expect(res).toBeDefined;
@@ -149,20 +175,29 @@ describe('DELETE /todos/:id', (done) => {
             });
     });
 
-    it('Should not delete for invalid ID', (done) => {
-        request(app).delete('/todos/123sdsffdf')
+    it('Should throw 404 for trying to delete other users todos', (done) => {
+        request(app).delete(`/todos/${todos[0]._id.toHexString()}`)
+            .set('x-auth', users[1].tokens[0].token)
             .expect(404)
             .end(done);
     });
 
-    it('Should not delete missing Id', (done) => {
+    it('Should throw 404 to delete for invalid ID', (done) => {
+        request(app).delete('/todos/123sdsffdf')
+            .set('x-auth', users[0].tokens[0].token)
+            .expect(404)
+            .end(done);
+    });
+
+    it('Should throw 404 to delete missing Id', (done) => {
         request(app).delete(`/todos/${new ObjectID().toHexString()}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(404)
             .end(done);
     });
 });
 
-describe('GTE /users/me', (done) => {
+describe('GET /users/me', (done) => {
 
     it('Should get user for authenticated user', (done) => {
         request(app).get('/users/me')

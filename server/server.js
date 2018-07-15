@@ -15,10 +15,10 @@ var app = express();
 
 app.use(bodyParser.json());
 
-app.post('/todos' , (req, res) => {
-    // console.log(req.body);
+app.post('/todos' , authenticate, (req, res) => {
     var todo = new ToDo({
-        text: req.body.text
+        text: req.body.text,
+        _creator : req.user._id
     });
 
     todo.save().then((doc) => {
@@ -29,8 +29,10 @@ app.post('/todos' , (req, res) => {
     });
 });
 
-app.get('/todos', (req, res) => {
-    ToDo.find({}).then((todos) => {
+app.get('/todos', authenticate, (req, res) => {
+    ToDo.find({
+        _creator : req.user._id
+    }).then((todos) => {
         // Below you can send directly the result as well. However, if you send array, it gives you 
         // additional option to add your custom return param to the data send to client side,
         // which can be used for processing something else. EG: {todos, mycustom: "abc", mycustom2, "def"}
@@ -41,15 +43,18 @@ app.get('/todos', (req, res) => {
     });
 });
 
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id', authenticate, (req, res) => {
     var id = req.params.id;
     if(!ObjectID.isValid(id)) {
         return res.status(404).send({
             "error": "Invalid Id"
         });
     } else {
-        // ToDo.find({_id: id}).then((todos) => {
-        ToDo.findById(id).then((todo) => {
+        ToDo.findOne({
+            _id: id,
+            _creator : req.user._id
+        }).then((todo) => {
+        // ToDo.findById(id).then((todo) => {
             // if(todos.length > 0){
             if(todo){
                 res.send({todo});
@@ -57,28 +62,32 @@ app.get('/todos/:id', (req, res) => {
                 res.status(404).send({"msg": `No Todos found for the id(${id})`})
             }
         }).catch((err) => {
+            console.log("Error", err);
             res.status(400).send(err);
         });
     }
 });
 
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
     var id = req.params.id;
     if(!ObjectID.isValid(id)) {
         return res.status(404).send({"error": "Invalid Object Id"});
     } 
-    ToDo.findByIdAndRemove(id).then((todo) => {
+    ToDo.findOneAndRemove({
+    // ToDo.findByIdAndRemove({
+        _id :id,
+        _creator : req.user._id
+    }).then((todo) => {
         if(!todo) {
             return res.status(404).send({"error": "No object found"});
         } 
-              
         res.send({"success" : "Object Deleted", todo});
     }).catch((err) => {
         res.status(400).send(err);
     });
 });
 
-app.patch("/todos/:id", (req, res) => {
+app.patch("/todos/:id", authenticate, (req, res) => {
     var id = req.params.id;
     var body = _.pick(req.body, ['text', 'completed']);
 
@@ -93,11 +102,17 @@ app.patch("/todos/:id", (req, res) => {
         body.completedAt = null;
     }
 
-    ToDo.findByIdAndUpdate(id, { $set: body}, {new : true}).then((todo) => {
+    // ToDo.findByIdAndUpdate(
+    ToDo.findOneAndUpdate(
+        {_id: id,
+         _creator : req.user._id
+        }, 
+        {$set: body}, 
+        {new : true}
+    ).then((todo) => {
         if(!todo) {
             return res.status(404).send({"error":"Update failed"});
         }
-
         res.send({"success":"Object Updated", todo});
     }).catch((err) => {
         res.status(400).send(err);
